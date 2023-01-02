@@ -11,7 +11,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { AddUserToDatabase, CreateUser } from "../Data/db";
 
 const Registration = () => {
-    const [error, setError] = useState(null);
+    const [error, setError] = useState("");
     const [isOpen, setOpen] = useState(false);
 
     const [firstName, setFirstName] = useState('');
@@ -20,14 +20,68 @@ const Registration = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
+    const firstNameRef = useRef();
+    const lastNameRef = useRef();
+    const emailRef = useRef();
+    const passwordRef = useRef();
+    const confirmPasswordRef = useRef();
+
     const handleClick = async (e) => {
         e.preventDefault();
+        if(checkFields()) return;
+
         const auth = getAuth();   
-        await CreateUser(auth, email, password).then((e) => { e != null ? setError(e) : setError(null) });
-        if(error == null)
-            AddUserToDatabase(firstName, lastName, email);
+        await CreateUser(auth, email, password).then(async (e) => {
+            if(e !== "" && e !== undefined && e !== null){
+                setError(e);
+                setOpen(true);
+            }
+            else{
+                setError("");
+                await AddUserToDatabase(firstName, lastName, email);
+                window.location.href = "/rooms";
+            }
+        });
+
     }
 
+    const checkFields = () => {
+        const emailRegular = new RegExp('^(?=.{1,64}@)[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*(\.[A-Za-z]{2,})$');
+        const nameRegular = new RegExp('^[a-zA-Z-]+$');
+        const passwordRegular = new RegExp('^[a-zA-Z0-9!$%^-_=+]+$');
+        if(email === "" || firstName === "" || lastName === "" || password === "" || confirmPassword === ""){
+            setError("Please, fill all the fields.");
+            setOpen(true);
+            return true;
+        }        
+        if(password !== confirmPassword){
+            setError("Passwords do not match.");            
+            setOpen(true);
+            return true;
+        }
+        if(password.length < 6){
+            setError("Password length must be more than 6 characters.");
+            setOpen(true);
+            return true;
+        }        
+        if(!emailRegular.test(email)){
+            setError("Incorrect email format.");
+            setOpen(true);
+            return true;
+        }
+        if(!nameRegular.test(firstName) || !nameRegular.test(lastName)){
+            setError("Name must have only latin letters. (a-Z)");
+            setOpen(true);
+            return true;
+        }
+        if(!passwordRegular.test(password)){
+            setError("Password must have only latin letters (a-Z), numbers (0-9) and special characters (!, $, %, ^, -, _, =, +)");
+            setOpen(true);
+            return true;
+        }
+        return false;
+    }
+    
     return(
         <>
             <div className="registration-div">
@@ -37,7 +91,8 @@ const Registration = () => {
                         <h1 className="registration-h1">Sign Up</h1> 
                         <TextField 
                             className="registration-input"
-                            id="firstName" label="First Name" variant="standard"                        
+                            id="firstName" label="First Name" variant="standard"   
+                            ref={firstNameRef}                     
                             onChange={(e) => setFirstName(e.target.value)}
                             value={firstName}                        
                             margin="normal"
@@ -46,14 +101,16 @@ const Registration = () => {
                         <br/> 
                         <TextField 
                             id="lastName" label="Last Name" variant="standard"                        
-                            onChange={(e) => setLastName(e.target.value)}
+                            ref={lastNameRef}
+                            onChange={(e) => setLastName(e.target.value)}                        
                             value={lastName}                        
                             margin="normal"
                             required                                                
                         />    
                         <br/>  
                         <TextField 
-                            id="email" label="Email" variant="standard"                        
+                            id="email" label="Email" variant="standard"     
+                            ref={emailRef}
                             onChange={(e) => setEmail(e.target.value)}
                             value={email}                        
                             margin="normal"
@@ -61,15 +118,19 @@ const Registration = () => {
                         />    
                         <br/>  
                         <TextField 
-                            id="password" label="Password" variant="standard"                        
+                            type="password"
+                            id="password" label="Password" variant="standard"   
+                            ref={passwordRef}                     
                             onChange={(e) => setPassword(e.target.value)}
-                            value={password}                        
+                            value={password}                                                    
                             margin="normal"
                             required                                                
                         />
                         <br/>      
                         <TextField 
-                            id="confirmPassword" label="Confirm Password" variant="standard"                        
+                            type="password"
+                            id="confirmPassword" label="Confirm Password" variant="standard"
+                            ref={confirmPasswordRef}                        
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             value={confirmPassword}                        
                             margin="normal"
@@ -81,9 +142,9 @@ const Registration = () => {
                     <p className="registration-p">Already have an account? <Link href="/login" color="primary">Sign In</Link></p>
                 </ThemeProvider>
             </div>
-            { error ? (                
+            { error !== "" || error !== undefined ? (         
                 <span className="footer">
-                    <Collapse in={!isOpen}>
+                    <Collapse in={isOpen}>
                         <Alert onClose={() => {setOpen(!isOpen)}} severity="error">{ error }</Alert>
                     </Collapse>
                 </span>
