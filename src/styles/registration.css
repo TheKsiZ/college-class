@@ -33,3 +33,9 @@ body {
     height: 55px;    
     margin-bottom: 15px;
 }
+
+.footer{
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { useRef, useState, useEffect } from "react";
-import { LinkRout } from 'react-router-dom';
+
+//import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 
 import { TextField, Button, Link, ThemeProvider } from "@mui/material";
 import Theme from "../muiComponents/MUIBlackTheme";

@@ -1,17 +1,32 @@
 import React from "react";
 import { useRef, useState, useEffect } from "react";
-import { TextField, Button, Link, ThemeProvider } from "@mui/material";
-import Theme from "../muiComponents/MUIBlackTheme";
 
+import { TextField, Button, Link, ThemeProvider, Alert, Collapse } from "@mui/material";
+import Theme from "../muiComponents/MUIBlackTheme";
 import "../styles/registration.css";
 import Logo from "../images/LogoBlack.png";
 
+//Firebase
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { AddUserToDatabase, CreateUser } from "../Data/db";
+
 const Registration = () => {
+    const [error, setError] = useState(null);
+    const [isOpen, setOpen] = useState(false);
+
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+
+    const handleClick = async (e) => {
+        e.preventDefault();
+        const auth = getAuth();   
+        await CreateUser(auth, email, password).then((e) => { e != null ? setError(e) : setError(null) });
+        if(error == null)
+            AddUserToDatabase(firstName, lastName, email);
+    }
 
     return(
         <>
@@ -27,7 +42,7 @@ const Registration = () => {
                             value={firstName}                        
                             margin="normal"
                             required                                                
-                        />     
+                        />
                         <br/> 
                         <TextField 
                             id="lastName" label="Last Name" variant="standard"                        
@@ -61,11 +76,18 @@ const Registration = () => {
                             required                                                
                         />                        
                         <br/><br/>                                  
-                        <Button variant="contained" color="primary">Accept</Button>
+                        <Button variant="contained" color="primary" onClick={handleClick}>Accept</Button>
                     </form>
                     <p className="registration-p">Already have an account? <Link href="/login" color="primary">Sign In</Link></p>
                 </ThemeProvider>
             </div>
+            { error ? (                
+                <span className="footer">
+                    <Collapse in={!isOpen}>
+                        <Alert onClose={() => {setOpen(!isOpen)}} severity="error">{ error }</Alert>
+                    </Collapse>
+                </span>
+            ) : null}
         </>
     );
 }
