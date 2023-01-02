@@ -1,13 +1,20 @@
 import db from './fbase';
 import { doc, setDoc } from "firebase/firestore"; 
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
+export const AuthorizateUser = async (auth, email, password) => (signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+        const user = userCredential.user;
+    })
+    .catch((error) => {
+        return error.message;
+    }));
 
 export const CreateUser = async (auth, email, password) => (createUserWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {        
         const user = userCredential.user;        
     })
-    .catch((error) => {        
+    .catch((error) => {                
         return error.message;
     }));
 
@@ -20,7 +27,7 @@ export const AddUserToDatabase = async (firstName, lastName, email) => {
             lastName: lastName,
             email: email,
         });
-        console.log("Document written with ID: ", userID);
+        console.log("Document written with ID: ", userID);               
     } catch (e) {
         console.error("Error adding document: ", e);
     }
