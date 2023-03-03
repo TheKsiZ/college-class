@@ -1,6 +1,7 @@
 import React from "react";
 import { useRef, useState, useEffect } from "react";
 
+//Mui
 import { TextField, Button, Link, ThemeProvider, Alert, Collapse } from "@mui/material";
 import Theme from "../muiComponents/MUIBlackTheme";
 import "../styles/registration.css";
@@ -8,7 +9,7 @@ import Logo from "../images/LogoBlack.png";
 
 //Firebase
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { AddUserToDatabase, CreateUser } from "../Data/db";
+import { AddUserToDatabase, CreateUser, SetUserToLocal } from "../Data/db";
 
 const Registration = () => {
     const [error, setError] = useState("");
@@ -28,7 +29,7 @@ const Registration = () => {
 
     const handleClick = async (e) => {
         e.preventDefault();
-        if(checkFields()) return;
+        if(validateFields()) return;
 
         const auth = getAuth();   
         await CreateUser(auth, email, password).then(async (e) => {
@@ -39,13 +40,14 @@ const Registration = () => {
             else{
                 setError("");
                 await AddUserToDatabase(firstName, lastName, email);
+                await SetUserToLocal();
                 window.location.href = "/rooms";
             }
         });
 
     }
 
-    const checkFields = () => {
+    const validateFields = () => {
         const emailRegular = new RegExp('^(?=.{1,64}@)[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*(\.[A-Za-z]{2,})$');
         const nameRegular = new RegExp('^[a-zA-Z-]+$');
         const passwordRegular = new RegExp('^[a-zA-Z0-9!$%^-_=+]+$');

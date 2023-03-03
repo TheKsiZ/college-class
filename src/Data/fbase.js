@@ -1,6 +1,6 @@
 import * as firebase from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-
+import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_DOMAIN,
@@ -9,7 +9,6 @@ const firebaseConfig = {
   messagingSenderId: process.env.REACT_APP_FIREBASE_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
-
 const app = firebase.initializeApp(firebaseConfig);
-const db = getFirestore(app);
-export default db;
+export const db = getFirestore(app);
+export const storage = getStorage(app);

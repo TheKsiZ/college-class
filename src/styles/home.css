@@ -1,0 +1,22 @@
+body {
+    margin: 0;
+    background-color: #2C6A4C;
+    font-family: 'Poppins', sans-serif;
+}
+.home-div {       
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.home-button{    
+    width: 150px;
+
+    min-height: 50px;
+    min-width: 150px;
+}
+
+.animated-text{
+    font-size: 36px;
+}

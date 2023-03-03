@@ -1,5 +1,5 @@
 import React from "react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 
 import { TextField, Button, Link, ThemeProvider, Alert, Collapse } from "@mui/material";
 import Theme from "../muiComponents/MUIBlackTheme";
@@ -8,7 +8,7 @@ import Logo from "../images/LogoBlack.png";
 
 //Firebase
 import { getAuth } from "firebase/auth";
-import { AuthorizateUser } from "../Data/db";
+import { AuthorizateUser, SetUserToLocal } from "../Data/db";
 
 const Login = () => {
     const [error, setError] = useState("");
@@ -22,22 +22,23 @@ const Login = () => {
 
     const handleClick = async (e) => {
         e.preventDefault();
-        if(checkFields()) return;
+        if(validateFields()) return;
 
         const auth = getAuth();
         await AuthorizateUser(auth, email, password).then(async (e) => {
-            if(e !== "" && e !== undefined && e !== null){
+            if(e){
                 setError(e);
                 setOpen(true);
             }
             else{
                 setError("");
-                window.location.href = "/rooms";
+                await SetUserToLocal();
+                window.location.href = "/rooms";                
             }
         })
     }
 
-    const checkFields = () => {
+    const validateFields = () => {
         if(email === "" || password === ""){
             setError("Please, fill all the fields.");
             setOpen(true);
@@ -82,7 +83,7 @@ const Login = () => {
                         <Alert onClose={() => {setOpen(!isOpen)}} severity="error">{ error }</Alert>
                     </Collapse>
                 </span>
-            ) : null}     
+            ) : <></>}     
         </>
     );
 }
