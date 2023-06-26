@@ -1,15 +1,21 @@
 import React, { useState, useRef } from "react";
-
+import { useTranslation } from "react-i18next";
 //Mui
-import { Box, Button, Modal, TextField, Typography } from '@mui/material';
+import { Box, Button, Modal, TextField, Typography, FormControl, InputLabel, MenuItem } from '@mui/material';
+import Select from '@mui/material/Select';
 import "../styles/rooms.css";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 //Firebase
-import { UpdateHomework, UpdateLesson } from "../Data/db";
+import { UpdateTask, UpdateLesson, IsUserStillInRoom } from "../Data/db";
+import { useNavigate } from "react-router-dom";
 
-const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
-
+const EditLessonModal = ({isOpen, handleClose, data, LoadLessons, handleBackdrop}) => {
+    const navigate = useNavigate();
+    if(!IsUserStillInRoom()){
+        navigate('/rooms');
+    }
+    const { t, i18n } = useTranslation();
     const fileRef = useRef();    
     const [fileName, setFileName] = useState("");
 
@@ -18,7 +24,6 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
         name = name.length > 28 ? name.slice(0, 28) + "..." : name;
         setFileName(name);
     }
-
 
     const [title, setTitle] = useState('');
     const titleRef = useRef();
@@ -30,23 +35,29 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
     const [openErrorDesc, setErrorDesc] = useState(false);
     const [errorDescText, setErrorDescText] = useState("");
 
+    const [type, setType] = useState("");
+    const handleTypeChange = (event) => {
+        setType(event.target.value);
+    };
 
     const [deadline, setDeadline] = useState(Date.now());
-    const deadlineRef = useRef();
     const [openErrorDeadline, setErrorDeadline] = useState(false);
     const [errorDeadlineText, setErrorDeadlineText] = useState("");
 
-    const handleClick = async () => {
-        if(validateFields()) return;
-
-        if(data.data.isLesson)
+    const handleClick = async () => {        
+        if(validateFields()) return;        
+        
+        handleBackdrop(true);
+        if(data.data.type === "lesson")
             await UpdateLesson(data.id, title, description, fileRef.current.files[0]);
         else
-            await UpdateHomework(data.id, title, description, deadline.valueOf(), fileRef.current.files[0]);
+            await UpdateTask(data.id, title, description, type, deadline.valueOf(), fileRef.current.files[0]);
         
         await LoadLessons();
         handleClosing();
-        handleClose();        
+        handleClose();       
+        
+        handleBackdrop(false);
     }
 
     const handleClosing = () => {
@@ -60,13 +71,14 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
         setErrorDesc(false);
         setTitle('');
         setDescription('');
+        setType('');
         handleClose();
     }
 
     const validateFields = () => {        
         if(title.length > 32){
             setErrorTitle(true);
-            setErrorTitleText("Max symbols are 32");
+            setErrorTitleText(t("error_room_title_length"));
             return true;
         }
         setErrorTitle(false);
@@ -74,15 +86,15 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
 
         if(description.length > 100){
             setErrorDesc(true);
-            setErrorDescText("Max symbols are 100");
+            setErrorDescText(t("error_room_desc_length"));
             return true;
         }
         setErrorDesc(false);
         setErrorDescText("");        
 
-        if(!data.data.isLesson && deadline.valueOf() < Date.now()){            
+        if(data.data.type !== "lesson" && deadline.valueOf() < Date.now()){            
             setErrorDeadline(true);
-            setErrorDeadlineText("Incorrect date");
+            setErrorDeadlineText(t("error_invalid_date"));
             return true;
         }
         setErrorDeadline(false);
@@ -99,16 +111,18 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
             aria-describedby="modal-modal-description"
         >
             <Box className="modal">                
-                <h1 style={{margin: 0}}>Edit a {data.data.isLesson ? "lesson" : "homework"}</h1>
+                <Typography fontSize={28}>
+                    {t(data.data.type)}
+                </Typography> 
                 <TextField 
                     id="title" 
-                    label="Title" 
+                    label={t("title")}
                     variant="standard"  
                     ref={titleRef}                      
                     onChange={(e) => setTitle(e.target.value)}
                     value={title}                                            
                     margin="normal"                                                                                 
-                    style={{width:235}}
+                    fullWidth={true}
                     error={openErrorTitle}
                     helperText={errorTitleText}
                     required                    
@@ -116,13 +130,13 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
                 <br/>
                 <TextField 
                     id="description"
-                    label="Small description" 
+                    label={t("description")}
                     variant="standard"  
                     ref={descriptionRef}                      
                     onChange={(e) => setDescription(e.target.value)}
                     value={description}                                            
                     margin="normal"
-                    style={{width:235}}
+                    fullWidth={true}
                     maxRows={4}
                     multiline  
                     error={openErrorDesc}
@@ -131,38 +145,55 @@ const EditLessonModal = ({isOpen, handleClose, data, LoadLessons}) => {
                 <br/>
                 <br/>
 
-                {data.data.isLesson ? <></> : 
+                {data.data.type === "lesson" ? <></> : 
                 <>
-                    <LocalizationProvider dateAdapter={AdapterMoment}>
-                    <DatePicker
-                        label="Deadline"
-                        inputFormat="DD/MM/yyyy"
-                        value={deadline}
-                        onChange={(newValue) => { setDeadline(newValue) }}
-                        renderInput={
-                            (params) => 
-                                <TextField 
-                                    {...params} 
-                                    error={openErrorDeadline}
-                                    helperText={errorDeadlineText}
-                                />
-                        }                        
-                    />
-                </LocalizationProvider>
+                    <FormControl fullWidth={true}>
+                        <InputLabel id="typeLabel">{t("type")}</InputLabel>
+                        <Select                                                          
+                            id="type"
+                            value={type}
+                            onChange={handleTypeChange}
+                            displayEmpty
+                            label={t("type")}
+                        >                           
+                            <MenuItem value="homework">{t("homework")}</MenuItem>
+                            <MenuItem value="practice">{t("practice")}</MenuItem>
+                            <MenuItem value="laboratory">{t("laboratory")}</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <br/>                             
+                    <br/>
+                    <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale={i18n.language}>
+                        <DatePicker
+                            label={t("deadline")}                            
+                            value={deadline}
+                            onChange={(newValue) => { setDeadline(newValue) }}
+                            renderInput={
+                                (params) => 
+                                    <TextField 
+                                        fullWidth={true}
+                                        {...params} 
+                                        error={openErrorDeadline}
+                                        helperText={errorDeadlineText}
+                                    />
+                            }                        
+                        />
+                    </LocalizationProvider>
                     <br/><br/>
                 </>}                
 
-                <Button variant="outlined" component="label"> 
-                    Upload File
+                <Button variant="outlined" component="label" fullWidth={true}> 
+                    {t("upload_file")}
                     <input type="file" ref={fileRef} onChange={handleChangeFile} hidden />
                 </Button>                
                 <br/>
                 <Typography>
                     {fileName}
                 </Typography>
-                <div style={{display: "flex", justifyContent: "space-between", marginTop: 25}}>
-                    <Button variant="contained" color="primary" onClick={handleClick}>Accept</Button>
-                    <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                <br/>
+                <div style={{display: "flex", justifyContent: "space-between"}}>
+                    <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleClick} fullWidth={true}>{t("accept")}</Button>
+                    <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                 </div>                
             </Box>            
         </Modal>     

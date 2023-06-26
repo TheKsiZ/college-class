@@ -1,17 +1,21 @@
 import React, { useState, useRef } from "react";
 
 //Mui
-import { Box, Button, Modal, TextField } from '@mui/material';
+import { Box, Button, Modal, TextField, Typography } from '@mui/material';
 import "../styles/rooms.css"
-
+import { useTranslation } from "react-i18next";
 //Firebase
 import { CreateRoom } from "../Data/db";
+import { useNavigate } from "react-router-dom";
 
-const Create = ({isOpen, handleClose}) => {    
+const Create = ({isOpen, handleClose, handleBackdrop}) => {    
+    const { t } = useTranslation();
+
+    const navigate = useNavigate();
 
     const [title, setTitle] = useState('');
     const titleRef = useRef();
-
+ 
     const [openErrorTitle, setOpenErrorTitle] = useState(false);
     const [errorTitleText, setErrorTitleText] = useState("");
     
@@ -24,10 +28,12 @@ const Create = ({isOpen, handleClose}) => {
     const handleClick = async () => {
         if(validateFields()) return;
 
+        handleBackdrop(true);
         await CreateRoom(title, description);
         
         handleClosing();
-        window.location.href="/room";
+        handleBackdrop(false);
+        navigate("/room");
     }
 
     const handleClosing = () => {
@@ -42,20 +48,20 @@ const Create = ({isOpen, handleClose}) => {
 
     const validateFields = () => {
         if(title === ""){
-            setErrorTitleText("Room must have a title");
+            setErrorTitleText(t("error_empty_room_title"));
             setOpenErrorTitle(true);
             return true;
         }
-        if(title.length > 32){
-            setErrorTitleText("Max symbols are 32");
+        if(title.length > 18){
+            setErrorTitleText(t("error_title_length"));
             setOpenErrorTitle(true);
             return true;
         }
         setErrorTitleText("");
         setOpenErrorTitle(false);
         
-        if(description.length > 100){
-            setErrorDescText("Max symbols are 100");
+        if(description.length > 26){
+            setErrorDescText(t("error_desc_length"));
             setOpenErrorDesc(true);
             return true;
         }
@@ -72,11 +78,13 @@ const Create = ({isOpen, handleClose}) => {
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
         >
-            <Box className="modal">                
-                <h1 style={{margin: 0}}>Create a room</h1>
+            <Box className="modal">                            
+                <Typography fontSize={28}>
+                    {t("create_room")}
+                </Typography>                         
                 <TextField 
                     id="title" 
-                    label="Title" 
+                    label={t("title")} 
                     variant="standard"  
                     ref={titleRef}                      
                     onChange={(e) => setTitle(e.target.value)}
@@ -90,7 +98,7 @@ const Create = ({isOpen, handleClose}) => {
                 <br/>
                 <TextField 
                     id="description"
-                    label="Small description" 
+                    label={t("description")}
                     variant="standard"  
                     ref={descriptionRef}                      
                     onChange={(e) => setDescription(e.target.value)}
@@ -102,10 +110,10 @@ const Create = ({isOpen, handleClose}) => {
                     error={openErrorDesc}
                     helperText={errorDescText}
                 />  
-                
-                <div style={{display: "flex", justifyContent: "space-between", marginTop: 25}}>
-                    <Button variant="contained" color="primary" onClick={handleClick}>Accept</Button>
-                    <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                <br/><br/>
+                <div style={{display: "flex", justifyContent: "space-between"}}>
+                    <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleClick} fullWidth={true}>{t("accept")}</Button>
+                    <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                 </div>                
             </Box>            
         </Modal>     

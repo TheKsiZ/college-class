@@ -1,30 +1,36 @@
 import React, { useState, useEffect } from "react";
-
 //Components
 import Navigation from "../../components/Navigation";
 import RoomCard from "../../components/RoomCard";
 //Mui
-import { Box, ThemeProvider, SpeedDial, SpeedDialIcon, SpeedDialAction, Grid, CircularProgress } from "@mui/material";
+import { Box, Backdrop, ThemeProvider, SpeedDial, SpeedDialIcon, SpeedDialAction, CircularProgress, Typography } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import JoinIcon from '@mui/icons-material/Login';
 import Theme from "../../muiComponents/MUIBlackTheme";
-
+import { useTranslation } from "react-i18next";
 import "../../styles/rooms.css";
 import Join from "../../components/Join";
 import Create from "../../components/Create";
-
+import { Context } from "../../index";
 //Firebase
-import { IsUserAuthorized, GetUserByRef, GetRoom, GetUser, SetUserToLocal } from "../../Data/db";
+import { IsUserAuthorized, GetUserByRef, GetRoom, GetUser, SetUserToLocal, RemoveTestCode } from "../../Data/db";
 
 
 const Rooms = () => {    
     IsUserAuthorized(); 
+    RemoveTestCode();
+
+    const { t } = useTranslation();
 
     const [user, setUser] = useState(GetUser());  
     const handleSetUser = () => setUser(GetUser());
 
     const [rooms, setRooms] = useState([]);
     const [progress, setProgress] = useState(false);
+
+    const [backdropOpen, setBackdropOpen] = useState(false);
+    const handleBackdrop = (state) => setBackdropOpen(state);
+
     const LoadRooms = async () => {                
         await SetUserToLocal();
         handleSetUser();
@@ -45,9 +51,9 @@ const Rooms = () => {
     }, []);
 
     const actions = [
-        { icon: <JoinIcon />, name: 'Join' },
-        { icon: <AddIcon />, name: 'Create'},                
-      ];
+        { icon: <JoinIcon />, name: t("join_action") },
+        { icon: <AddIcon />, name: t("create_action")},                
+    ];
 
     const [open, setOpen] = useState(false);    
     const handleOpen = () => setOpen(true);
@@ -56,18 +62,19 @@ const Rooms = () => {
     const [openModalJoin, setOpenModalJoin] = useState(false);
     const handleOpenModalJoin = () => setOpenModalJoin(true);
     const handleCloseModalJoin = () => setOpenModalJoin(false);
-
     const [openModalCreate, setOpenModalCreate] = useState(false);
     const handleOpenModalCreate = () => setOpenModalCreate(true);
     const handleCloseModalCreate = () => setOpenModalCreate(false);
 
     const handleClick = (e, actionName) => {
         switch(actionName){
-            case 'Join':
-                setOpenModalJoin(true);
+            case t("join_action"):
+                handleOpenModalJoin();
                 break;
-            case 'Create':
-                setOpenModalCreate(true);
+            case t("create_action"):
+                handleOpenModalCreate();
+                break;
+            default:
                 break;
         }        
     }    
@@ -77,28 +84,55 @@ const Rooms = () => {
             <ThemeProvider theme={Theme}>
                 <Navigation/>                
                 {!progress ? <CircularProgress className="rooms-div" /> : (
-                    <Box sx={{m: 2}}>
-                        <Grid container rowSpacing={1} columnSpacing={1} >                                                       
-                            {rooms.map((el) => {                                 
-                                return(
-                                    <Grid item xs={3} key={el.roomData.id}>
-                                        <RoomCard                                             
-                                            data={el}                                                                                    
-                                        />
-                                    </Grid>
-                                );                                         
-                            })}
-                        </Grid>
-                    </Box>
-                )}
-                
+                    <div 
+                        style={{
+                            margin: "auto",                            
+                            display: "flex", 
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            justifyContent: "flex-start",
+                        }}
+                    >                  
 
-                <Join handleClose={handleCloseModalJoin} isOpen={openModalJoin}/>                    
-                <Create handleClose={handleCloseModalCreate} isOpen={openModalCreate}/>
+                        {
+                            rooms.length !== 0 ?
+                                rooms.map((el, index) => {                                 
+                                    return(
+                                            <RoomCard 
+                                                key={index}      
+                                                data={el}                                                                                    
+                                            />
+                                    ); 
+                                })
+                            :
+                            <>              
+                                <Box sx={{ m: "auto", color: "#163526", textAlign: "center"}}>
+                                    <Typography fontSize={48}>
+                                        {t("empty")}
+                                    </Typography>
+                                    <Typography>
+                                        {t("empty_rooms")}
+                                    </Typography>
+                                </Box>                                                  
+                            </>
+                        }
+                    </div>
+                )}                
+
+                <Join
+                    handleClose={handleCloseModalJoin} 
+                    isOpen={openModalJoin}
+                    handleBackdrop={handleBackdrop}
+                />                    
+                <Create 
+                    handleClose={handleCloseModalCreate} 
+                    isOpen={openModalCreate}
+                    handleBackdrop={handleBackdrop}
+                />
 
                 <SpeedDial
                     ariaLabel="Create/Join"
-                    sx={{ position: 'absolute', bottom: 16, right: 16 }}
+                    sx={{ position: 'fixed', bottom: 16, right: 16 }}
                     icon={<SpeedDialIcon />}
                     onClose={handleClose}
                     onOpen={handleOpen}
@@ -112,7 +146,16 @@ const Rooms = () => {
                             onClick={(e) => handleClick(e,action.name)}
                         />
                     ))}
-                </SpeedDial>                
+                </SpeedDial>     
+
+            <Backdrop                    
+                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1000 }}
+                open={backdropOpen}                    
+            >
+                <Box sx={{m: "auto"}}>
+                    <CircularProgress />
+                </Box>
+            </Backdrop>            
             </ThemeProvider>            
         </>
     );

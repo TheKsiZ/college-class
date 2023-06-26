@@ -1,12 +1,16 @@
 import React, { useState, useRef } from "react";
 
 //Mui
-import { Box, Button, Modal, TextField } from '@mui/material';
+import { Box, Button, Modal, TextField, Typography } from '@mui/material';
 import "../styles/rooms.css";
-
+import { useTranslation } from "react-i18next";
 //Firebase
-import { AddRoomToUser, SetRoomCode, ValidateRoomCode } from "../Data/db";
-const Join = ({isOpen, handleClose}) => {
+import { AddRoomToUser, SetRoomCode, ValidateRoomCode, IsAlreadyJoinedRoom, IsUserTeacher } from "../Data/db";
+import { useNavigate } from "react-router-dom";
+const Join = ({isOpen, handleClose, handleBackdrop}) => {
+    const { t } = useTranslation();
+
+    const navigate = useNavigate();
 
     const [code, setCode] = useState('');
     const codeRef = useRef();
@@ -16,21 +20,32 @@ const Join = ({isOpen, handleClose}) => {
 
     const handleClick = async () => {
         if(await handleError()) return;
+
+        handleBackdrop(true);
         SetRoomCode(code);
         await AddRoomToUser();
-        window.location.href="/room";
+        await IsUserTeacher();
+        handleBackdrop(false);
+        
+        navigate("/room");        
     }
 
     const handleError = async () => {                
         if(code === ""){
             setError(true);
-            setErrorText('Type a code'); 
+            setErrorText(t("error_empty_code")); 
             return true;              
         }   
 
         if(!(await ValidateRoomCode(code))){
             setError(true);
-            setErrorText('Invalid code');
+            setErrorText(t("error_invalid_code"));
+            return true;
+        }
+
+        if((await IsAlreadyJoinedRoom(code))){
+            setError(true);
+            setErrorText(t("error_already_in_room"));
             return true;
         }
 
@@ -53,22 +68,26 @@ const Join = ({isOpen, handleClose}) => {
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
         >
-            <Box className="modal">
-                <h1 style={{margin: 0}}>Join to room</h1>
+            <Box className="modal">            
+                <Typography fontSize={28}>
+                    {t("join_room")}
+                </Typography>  
                 <TextField 
                     id="code" 
-                    label="Code" 
+                    label={t("code")} 
                     variant="standard"  
                     ref={codeRef}                      
                     onChange={(e) => setCode(e.target.value)}
                     value={code}                                            
                     margin="normal"   
                     error={error}     
-                    helperText={(errorText)}                                                                         
+                    helperText={(errorText)}     
+                    fullWidth={true}                                                                    
                 />  
-                <div style={{display: "flex", justifyContent: "space-between", marginTop: 25}}>
-                    <Button variant="contained" color="primary" onClick={handleClick}>Accept</Button>
-                    <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                <br/><br/>
+                <div style={{display: "flex", justifyContent: "space-between"}}>                    
+                    <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleClick} fullWidth={true}>{t("accept")}</Button>
+                    <Button  variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>                    
                 </div>
             </Box>
         </Modal>                               

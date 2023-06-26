@@ -1,39 +1,44 @@
 import React, { useEffect, useState } from 'react';
-
+import { useTranslation } from "react-i18next";
 //Mui
 import NavigationRoom from "../../components/NavigationRoom";
-import { Box, ThemeProvider, Grid, CircularProgress, SpeedDial, SpeedDialIcon, SpeedDialAction } from "@mui/material";
+import { Box, Backdrop, ThemeProvider, CircularProgress, SpeedDial, SpeedDialIcon, SpeedDialAction, Typography } from "@mui/material";
 import Theme from "../../muiComponents/MUIBlackTheme";
 import "../../styles/rooms.css";
-import LessonIcon from '@mui/icons-material/Book';
-import HomeworkIcon from '@mui/icons-material/ImportContacts';
+import TaskIcon from '@mui/icons-material/Book';
+import LessonIcon from '@mui/icons-material/ImportContacts';
+import TestIcon from '@mui/icons-material/Ballot';
 
 import CreateLessonModal from "../../components/CreateLessonModal";
-import CreateHomeworkModal from "../../components/CreateHomeworkModal";
+import CreateTaskModal from "../../components/CreateTaskModal";
 //Firebase
-import { GetRoomCode, GetLesson, IsCodeActive, GetRoomByCode, IsUserTeacher } from '../../Data/db';
+import { GetRoomCode, GetLesson, IsCodeActive, GetRoomByCode, RemoveTestCode, GetIsUserTeacher } from '../../Data/db';
 import LessonCard from '../../components/LessonCard';
+import { useNavigate } from 'react-router-dom';
 
 const Room = () => {        
     IsCodeActive();
-    const [isTeacher, setTeacher] = useState();
+    RemoveTestCode();
+    
+    const navigate = useNavigate();
+
+    const { t } = useTranslation();
     
     const [progress, setProgress] = useState(false);
     const [lessons, setLessons] = useState([]);
     const LoadLessons = async () => {      
         setLessons([]);  
         setProgress(false);
-         
-        setTeacher(await IsUserTeacher());                
+                       
         const room = await GetRoomByCode(GetRoomCode());                        
-        await room.lessons.map(async (element) => {            
+        await Promise.all(await room.lessons.map(async (element) => {            
             const data = await GetLesson(element);
             const lesson = {
                 id: element.id,
                 data: data,
             }             
             setLessons(lessons => [...lessons, lesson]);            
-        });
+        }));
         setProgress(true);
     }
     useEffect(() => {
@@ -41,8 +46,9 @@ const Room = () => {
     }, []);
 
     const actions = [
-        { icon: <LessonIcon />, name: 'Create lesson' },
-        { icon: <HomeworkIcon />, name: 'Create homework'},                
+        { icon: <LessonIcon />, name: t("lesson_action")},
+        { icon: <TaskIcon />, name: t("task_action")},          
+        { icon: <TestIcon />, name: t("test_action")},                
       ];
 
     const [open, setOpen] = useState(false);    
@@ -53,17 +59,25 @@ const Room = () => {
     const handleOpenModalCreateLesson = () => setOpenModalCreateLesson(true);
     const handleCloseModalCreateLesson = () => setOpenModalCreateLesson(false);
 
-    const [openModalCreateHomework, setOpenModalCreateHomework] = useState(false);
-    const handleOpenModalCreateHomework = () => setOpenModalCreateHomework(true);
-    const handleCloseModalCreateHomework = () => setOpenModalCreateHomework(false);
+    const [openModalCreateTask, setOpenModalCreateTask] = useState(false);
+    const handleOpenModalCreateTask = () => setOpenModalCreateTask(true);
+    const handleCloseModalCreateTask = () => setOpenModalCreateTask(false);
+
+    const [backdropOpen, setBackdropOpen] = useState(false);
+    const handleBackdrop = (state) => setBackdropOpen(state);
 
     const handleClick = async (e, actionName) => {        
         switch(actionName){
-            case 'Create lesson':                
+            case t("lesson_action"):                
                 handleOpenModalCreateLesson();                                
                 break;
-            case 'Create homework':
-                handleOpenModalCreateHomework();
+            case t("task_action"):
+                handleOpenModalCreateTask();
+                break;
+            case t("test_action"):
+                navigate("/room/test");
+                break;
+            default:
                 break;
         }        
     }    
@@ -74,39 +88,68 @@ const Room = () => {
                 <NavigationRoom/>
                 
                 {!progress ? <CircularProgress className="rooms-div" /> : (
-                    <Box sx={{m: 2}}>
-                        <Grid container rowSpacing={1} columnSpacing={1} >                                
-                            {lessons.map((el, index) => {                                      
-                                return(
-                                    <Grid item xs={3} key={index}>
-                                        <LessonCard 
-                                            data={el}
-                                            IsUserTeacher={isTeacher}
-                                            LoadLessons={LoadLessons}
-                                        />
-                                    </Grid>
-                                );                                         
-                            })}
-                        </Grid>
-                    </Box>
+                    <div 
+                        style={{
+                            margin: "auto",                            
+                            display: "flex", 
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            justifyContent: "flex-start",
+
+                        }}
+                    >                        
+                            {
+                                lessons.length !== 0 ?
+                                    lessons.map((el, index) => {                                      
+                                        return(                                                                        
+                                                <LessonCard     
+                                                    key={index}                                        
+                                                    data={el}                                            
+                                                    LoadLessons={LoadLessons}
+                                                    handleBackdrop={handleBackdrop}
+                                                />                                    
+                                        );                                         
+                                    })
+                                :
+                                <>
+                                    <Box sx={{ m: "auto", color: "#163526", textAlign: "center"}}>
+                                        <Typography fontSize={48}>
+                                            {t("empty")}
+                                        </Typography>
+                                        {
+                                            GetIsUserTeacher() ?
+                                            <Typography>
+                                                {t("empty_room_teacher")}
+                                            </Typography>
+                                            :
+                                            <Typography>
+                                                {t("empty_room")}
+                                            </Typography>
+                                        }                                        
+                                    </Box>   
+                                </>
+                            }                     
+                    </div>
                 )}
 
                 <CreateLessonModal 
                     handleClose={handleCloseModalCreateLesson} 
                     isOpen={openModalCreateLesson}
                     LoadLessons={LoadLessons}
+                    handleBackdrop={handleBackdrop}
                 />
-                <CreateHomeworkModal 
-                    handleClose={handleCloseModalCreateHomework} 
-                    isOpen={openModalCreateHomework}
+                <CreateTaskModal 
+                    handleClose={handleCloseModalCreateTask} 
+                    isOpen={openModalCreateTask}
                     LoadLessons={LoadLessons}
+                    handleBackdrop={handleBackdrop}
                 />
 
-                {isTeacher ? 
+                {GetIsUserTeacher() ? 
                 <>
                     <SpeedDial
-                        ariaLabel="Create Lesson/Homework"
-                        sx={{ position: 'absolute', bottom: 16, right: 16 }}
+                        ariaLabel="Create Lesson/Task/Test"
+                        sx={{ position: 'fixed', bottom: 16, right: 16 }}
                         icon={<SpeedDialIcon />}
                         onClose={handleClose}
                         onOpen={handleOpen}
@@ -122,7 +165,16 @@ const Room = () => {
                         ))}
                     </SpeedDial>  
                 </> 
-                : <></>}                
+                : <></>}       
+
+                <Backdrop                    
+                    sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1000 }}
+                    open={backdropOpen}                    
+                >
+                    <Box sx={{m: "auto"}}>
+                        <CircularProgress  />
+                    </Box>
+                </Backdrop>         
             </ThemeProvider>
         </>
     );

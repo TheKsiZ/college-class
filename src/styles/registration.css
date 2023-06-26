@@ -29,7 +29,8 @@ body {
 }
 
 .registration-img{
-    width: 295px;
+    width: auto;
+    margin: 10px;
     height: 55px;    
     margin-bottom: 15px;
 }

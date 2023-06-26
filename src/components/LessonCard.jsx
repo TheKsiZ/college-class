@@ -1,18 +1,20 @@
 import React, { useState } from "react";
 
 import OpenLessonModal from "../components/OpenLessonModal";
+import { useTranslation } from "react-i18next";
 //Mui
 import { Card, CardActions, CardContent, Button, Typography } from '@mui/material';
 import AlertModal from "./AlertModal";
-import { DeleteHomework, DeleteLesson } from "../Data/db";
+import { DeleteTask, DeleteLesson, SetTestCode, GetIsUserTeacher, DeleteTest, IsUserStillInRoom } from "../Data/db";
 import EditLessonModal from "./EditLessonModal";
+import { useNavigate } from "react-router-dom";
 
-const LessonCard = ({data, IsUserTeacher, LoadLessons}) => {        
+const LessonCard = ({data, LoadLessons, handleBackdrop}) => {        
     const date = new Date(data.data.creationDate);
+    IsUserStillInRoom();
+    const navigate = useNavigate();
 
-    const [open, setOpen] = useState(false);    
-    const handleOpen = () => setOpen(true);
-    const handleClose = () => setOpen(false);        
+    const { t, i18n } = useTranslation();
 
     const [openModalLesson, setOpenModalLesson] = useState(false);
     const handleOpenModalLesson = () => setOpenModalLesson(true);
@@ -27,56 +29,112 @@ const LessonCard = ({data, IsUserTeacher, LoadLessons}) => {
     const handleCloseModalAlert = () => setOpenModalAlert(false);
     
     const handleClickAlert = async () => {
-        if(data.data.isLesson)
+
+        handleBackdrop(true);
+        if(data.data.type === "lesson")
             await DeleteLesson(data.id);
+        else if(data.data.type === "test")
+            await DeleteTest(data.id);
         else
-            await DeleteHomework(data.id);
+            await DeleteTask(data.id);
+        
         await LoadLessons();
         handleCloseModalAlert();
+
+        handleBackdrop(false);
     }
+
+    const handleOpenTest = () => {                
+        SetTestCode(data.id);
+        navigate("/room/test");        
+    }
+
+    const handleEditTest = () => {        
+        SetTestCode(data.id);
+        navigate("/room/test");        
+    }
+
     return(                            
         <>
-            <Card sx={{ minWidth: 150 }}>            
+            <Card sx={{ width: 315, height: 150, minWidth: 295, minHeight: 150, margin: 1 }}>            
                 <CardContent sx={{pb:0}}>     
                     <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                        {data.data.isLesson ? "Lesson" : "Homework"} | {date.toDateString()}
+                        {t(data.data.type)} {"№" + data.data.index} | {date.toLocaleDateString(`${i18n.language}-${i18n.language.toUpperCase()}`)}
                     </Typography>           
                     <Typography variant="h5" component="div">
-                        {data.data.title}
+                        {
+                            data.data.title.length > 17 ? 
+                            <>
+                                {data.data.title.slice(0, 17) + "..."}
+                            </>
+                            :
+                            <>
+                                {data.data.title}
+                            </>
+                        }                             
                     </Typography>                
                     <Typography variant="body1">
-                        {data.data.description}
+                        {
+                            data.data.description.length > 27 ? 
+                            <>
+                                {data.data.description.slice(0, 27) + "..."}
+                            </>
+                            :
+                            data.data.description.length === 0 ?
+                            <>
+                                <br/>   
+                            </>
+                            :
+                            <>
+                                {data.data.description}
+                            </>
+                        }                        
                     </Typography>
                 </CardContent>
-                <CardActions style={{display: "flex", justifyContent: "space-between"}}>                    
-                        <Button variant="contained" color="primary" onClick={handleOpenModalLesson} size="small">Open</Button>
-                        {IsUserTeacher ?                         
+                <CardActions style={{display: "flex", justifyContent: "space-between"}}>  
+                    {
+                        data.data.type === "test" ?
                         <>
-                            <Button variant="contained" color="primary" onClick={handleOpenModalEditLesson} size="small">Edit</Button>                                                 
-                            <Button variant="contained" color="error" onClick={handleOpenModalAlert} size="small">Delete</Button>
+                            <Button variant="contained" color="primary" onClick={handleOpenTest} size="small" fullWidth={true}>{t("open")}</Button>
+                            {GetIsUserTeacher() ?                         
+                                <>
+                                    <Button variant="contained" color="primary" onClick={handleEditTest} size="small" fullWidth={true}>{t("edit")}</Button>                                                 
+                                    <Button variant="contained" color="error" onClick={handleOpenModalAlert} size="small" fullWidth={true}>{t("delete")}</Button>
+                                </>                                                            
+                            :<></>}
                         </>
-                        : <></> }
-                     
+                        :
+                        <>
+                            <Button variant="contained" color="primary" onClick={handleOpenModalLesson} size="small" fullWidth={true}>{t("open")}</Button>
+                            {GetIsUserTeacher() ?                         
+                            <>
+                                <Button variant="contained" color="primary" onClick={handleOpenModalEditLesson} size="small" fullWidth={true}>{t("edit")}</Button>                                                 
+                                <Button variant="contained" color="error" onClick={handleOpenModalAlert} size="small" fullWidth={true}>{t("delete")}</Button>
+                            </>
+                            : <></> }
+                        </>
+                    }                                                               
                 </CardActions>
             </Card>        
                         
             <OpenLessonModal 
                 handleClose={handleCloseModalLesson} 
                 isOpen={openModalLesson} 
-                data={data}
-                IsUserTeacher={IsUserTeacher}
+                data={data}                                
+                handleBackdrop={handleBackdrop}
             />
             <EditLessonModal
                 handleClose={handleCloseModalEditLesson}
                 isOpen={openModalEditLesson}            
                 LoadLessons={LoadLessons}   
                 data={data}             
+                handleBackdrop={handleBackdrop}
             />
             <AlertModal 
                 handleClose={handleCloseModalAlert} 
                 isOpen={openModalAlert} 
                 handleClick={handleClickAlert} 
-                description={`Are you sure you want to delete the ${data.isLesson ? "lesson" : "homework"}?`}
+                description={t("alert_delete_lesson") + " " + t(data.data.type + "_delete") + "?"}                
             />
         </>
     );

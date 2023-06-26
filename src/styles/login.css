@@ -29,7 +29,7 @@ body {
 }
 
 .login-img{
-    width: 295px;
+    width: auto;    
     height: 55px;    
     margin-bottom: 15px;
 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-
+import { useTranslation } from "react-i18next";
 //Mui
 import { Box, Button, Modal, TextField, Typography } from '@mui/material';
 import "../styles/rooms.css";
@@ -7,11 +7,11 @@ import "../styles/rooms.css";
 //Firebase
 import { CreateLesson } from "../Data/db";
 
-const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
+const CreateLessonModal = ({isOpen, handleClose, LoadLessons, handleBackdrop}) => {
 
     const fileRef = useRef();    
     const [fileName, setFileName] = useState("");
-
+    const { t, i18n } = useTranslation();
     const handleChangeFile = () => {
         let name = fileRef.current.files[0].name;
         name = name.length > 28 ? name.slice(0, 28) + "..." : name;
@@ -34,10 +34,13 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
     const handleClick = async () => {
         if(validateFields()) return;
 
+        handleBackdrop(true);
         await CreateLesson(title, description, fileRef.current.files[0]);
         await LoadLessons();
         handleClosing();
-        handleClose();        
+        handleClose();  
+        
+        handleBackdrop(false);
     }
 
     const handleClosing = () => {
@@ -54,12 +57,12 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
     const validateFields = () => {        
         if(title === ""){
             setErrorTitle(true);
-            setErrorTitleText("Lesson must have a title");
+            setErrorTitleText(t("error_empty_lesson_title"));
             return true;
         }        
         if(title.length > 32){
             setErrorTitle(true);
-            setErrorTitleText("Max symbols are 32");
+            setErrorTitleText(t("error_room_title_length"));
             return true;
         }
         setErrorTitle(false);
@@ -67,7 +70,7 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
 
         if(description.length > 100){
             setErrorDesc(true);
-            setErrorDescText("Max symbols are 100");
+            setErrorDescText(t("error_room_desc_length"));
             return true;
         }
         setErrorDesc(false);
@@ -84,10 +87,13 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
             aria-describedby="modal-modal-description"
         >
             <Box className="modal">                
-                <h1 style={{margin: 0}}>Create a lesson</h1>
+                <Typography fontSize={28}>
+                    {t("lesson_action")}
+                </Typography>    
                 <TextField 
+                    fullWidth={true}
                     id="title" 
-                    label="Title" 
+                    label={t("title")}
                     variant="standard"  
                     ref={titleRef}                      
                     onChange={(e) => setTitle(e.target.value)}
@@ -100,8 +106,9 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
                 />  
                 <br/>
                 <TextField 
+                    fullWidth={true}
                     id="description"
-                    label="Small description" 
+                    label={t("description")}
                     variant="standard"  
                     ref={descriptionRef}                      
                     onChange={(e) => setDescription(e.target.value)}
@@ -115,17 +122,18 @@ const CreateLessonModal = ({isOpen, handleClose, LoadLessons}) => {
                 />  
                 <br/>
                 <br/>
-                <Button variant="outlined" component="label"> 
-                    Upload File
+                <Button variant="outlined" component="label" fullWidth={true}> 
+                    {t("upload_file")}
                     <input type="file" ref={fileRef} onChange={handleChangeFile} hidden />
                 </Button>                
                 <br/>
                 <Typography>
                     {fileName}
                 </Typography>
-                <div style={{display: "flex", justifyContent: "space-between", marginTop: 25}}>
-                    <Button variant="contained" color="primary" onClick={handleClick}>Accept</Button>
-                    <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                <br/>
+                <div style={{display: "flex", justifyContent: "space-between"}}>
+                    <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleClick} fullWidth={true}>{t("accept")}</Button>
+                    <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                 </div>                
             </Box>            
         </Modal>     

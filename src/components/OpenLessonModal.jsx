@@ -1,24 +1,29 @@
 import React, { useState, useRef } from "react";
-
+import { useTranslation } from "react-i18next";
 //Mui
 import { Box, Button, Modal, TextField, Link, Typography } from '@mui/material';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import "../styles/rooms.css";
-import { SendHomeworkFile } from "../Data/db";
+import { SendTaskFile, GetIsUserTeacher, IsUserStillInRoom } from "../Data/db";
 
-import HomeworkListModal from "./HomeworkListModal";
+import TaskListModal from "./TaskListModal";
+import { useNavigate } from "react-router-dom";
 
-const OpenLessonModal = ({isOpen, handleClose, data, IsUserTeacher}) => {          
-          
+const OpenLessonModal = ({isOpen, handleClose, data, handleBackdrop}) => {          
+    const navigate = useNavigate();
+    if(!IsUserStillInRoom()){
+        navigate('/rooms');
+    }      
+
+    const { t, i18n } = useTranslation();
     const [title, setTitle] = useState(data.data.title);
     const titleRef = useRef();
     
     const [description, setDescription] = useState(data.data.description);
     const descriptionRef = useRef();        
 
-    const [deadline, setDeadline] = useState(data.data.deadline);
-    const deadlineRef = useRef();    
+    const [deadline, setDeadline] = useState(data.data.deadline);       
 
     const fileRef = useRef();
     const [fileName, setFileName] = useState('');
@@ -30,8 +35,10 @@ const OpenLessonModal = ({isOpen, handleClose, data, IsUserTeacher}) => {
         setFileName('');
         handleClose();
     }
-    const handleSendFile = async () => {
-        await SendHomeworkFile(data.id, fileRef.current.files[0]);
+    const handleSendFile = async () => { 
+        handleBackdrop(true);       
+        await SendTaskFile(data.id, fileRef.current.files[0]);
+        handleBackdrop(false);
         handleClosing();
     }
 
@@ -46,45 +53,51 @@ const OpenLessonModal = ({isOpen, handleClose, data, IsUserTeacher}) => {
             aria-labelledby="modal-modal-title"
             aria-describedby="modal-modal-description"
         >
-            <Box className="modal">                
-                <h1 style={{margin: 0}}>{data.data.isLesson ? "Lesson" : "Homework"}</h1>
+            <Box className="modal">    
+                <Typography fontSize={28}>
+                    {t(data.data.type)}
+                </Typography>                             
                 <TextField 
                     id="title" 
-                    label="Title" 
+                    label={t("title")}
                     variant="standard"  
                     ref={titleRef}                      
                     onChange={(e) => setTitle(e.target.value)}
                     value={title}                                            
                     margin="normal"                                                                                 
-                    style={{width:235}}                                        
-                    disabled
+                    fullWidth={true}
+                    InputProps={{
+                        readOnly: true,
+                    }}
                 />  
                 <br/>
                 <TextField 
                     id="description"
-                    label="Small description" 
+                    label={t("description")}
                     variant="standard"  
                     ref={descriptionRef}                      
                     onChange={(e) => setDescription(e.target.value)}
                     value={description}                                            
-                    margin="normal"
-                    style={{width:235}}
+                    margin="normal"                    
                     maxRows={4}
                     multiline     
-                    disabled        
+                    InputProps={{
+                        readOnly: true,
+                    }}
+                    fullWidth={true}
                 />  
                 <br/><br/>
-                {data.data.isLesson ? <></> : 
+                {data.data.type === "lesson" ? <></> : 
                 <>
-                    <LocalizationProvider dateAdapter={AdapterMoment}>
-                        <DatePicker
-                            label="Deadline"
-                            inputFormat="DD/MM/yyyy"
+                    <LocalizationProvider dateAdapter={AdapterMoment} adapterLocale={i18n.language}>
+                        <DatePicker                                                    
+                            label={t("deadline")}                            
                             value={deadline}                            
                             onChange={(newValue) => { setDeadline(newValue) }}
                             renderInput={
                                 (params) => 
                                     <TextField 
+                                        fullWidth={true}
                                         {...params}                                         
                                     />
                             }                        
@@ -95,13 +108,13 @@ const OpenLessonModal = ({isOpen, handleClose, data, IsUserTeacher}) => {
                 </>}                
                 
                 {data.data.downloadLink !== undefined ? 
-                    <><Link href={data.data.downloadLink}>Download file</Link><br/><br/></>
+                    <><Typography sx={{mb: 2}}><Link href={data.data.downloadLink}>{t("download_file")}</Link></Typography></>
                 : <></>}         
 
-                {data.data.isLesson || IsUserTeacher ? <></> :
+                {data.data.type === "lesson" || GetIsUserTeacher() ? <></> :
                 <>
-                    <Button variant="outlined" component="label" disabled={deadline < Date.now()}> 
-                        Upload File
+                    <Button variant="outlined" component="label" disabled={deadline < Date.now()} fullWidth={true}> 
+                        {t("upload_file")}
                         <input type="file" ref={fileRef} onChange={handleChangeFile} hidden />
                     </Button>                    
                     <Typography>
@@ -110,34 +123,41 @@ const OpenLessonModal = ({isOpen, handleClose, data, IsUserTeacher}) => {
                     <br/>
                 </>}       
                 
-                {fileName.length > 0 ? 
+                {fileName.length > 0 && !GetIsUserTeacher() ? 
                 <>                    
                     <div style={{display: "flex", justifyContent: "space-between"}}>
-                        <Button variant="contained" color="primary" onClick={handleSendFile}>Accept</Button>
-                        <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                        <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleSendFile} fullWidth={true}>{t("accept")}</Button>
+                        <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                     </div>  
                 </> 
-                : <></>}                                    
+                :
+                !GetIsUserTeacher() ? 
+                <>
+                    <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
+                </> 
+                :
+                <></>}                                    
                 
-                {IsUserTeacher ? 
+                {data.data.type !== "lesson" && GetIsUserTeacher() ? 
                 <>
                     <div style={{display: "flex", justifyContent: "space-between"}}>
-                        <Button variant="contained" color="primary" onClick={handleOpenHomeworkListModal}>Look Files</Button>
-                        <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                        <Button sx={{marginRight: 1}} variant="contained" color="primary" onClick={handleOpenHomeworkListModal} fullWidth={true}>{t("look_files")}</Button>
+                        <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                     </div>  
                 </>
-                : <></>}
-
-                {!IsUserTeacher && fileName.length === 0 ? 
+                : 
+                GetIsUserTeacher() ?
                 <>
-                    <Button variant="contained" color="primary" onClick={handleClosing}>Close</Button>
+                    <Button variant="contained" color="primary" onClick={handleClosing} fullWidth={true}>{t("close")}</Button>
                 </>
-                : <></>}
+                :
+                <></>}
 
-                <HomeworkListModal 
+                <TaskListModal 
                     handleClose={handleCloseHomeworkListModal} 
                     isOpen={openHomeworkListModal} 
-                    id={data.id}                    
+                    id={data.id}       
+                    handleBackdrop={handleBackdrop}             
                 />
 
             </Box>            

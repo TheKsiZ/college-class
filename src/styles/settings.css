@@ -5,6 +5,7 @@ body {
 }
 .settings-form {
     min-width: 175px;
+    width: 300px;
     min-height: 150px;
     display: justify;
     justify-content: space-between;
